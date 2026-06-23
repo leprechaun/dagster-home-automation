@@ -36,7 +36,7 @@ def power_by_area_and_date(context: AssetExecutionContext) -> pl.DataFrame:
     context.log.info(f"Read {len(df)} rows from electricity delta table")
     return df
 
-@asset_check(asset=power_by_area_and_date)
+@asset_check(asset=power_by_area_and_date, blocking=True)
 def power_by_area_and_date_not_empty(power_by_area_and_date: pl.DataFrame) -> AssetCheckResult:
     row_count = len(power_by_area_and_date)
     return AssetCheckResult(
