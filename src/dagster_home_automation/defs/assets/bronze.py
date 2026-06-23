@@ -1,5 +1,13 @@
 import polars as pl
-from dagster import AutomationCondition, Definitions, AssetExecutionContext, asset, EnvVar
+from dagster import (
+    AutomationCondition,
+    AssetCheckResult,
+    AssetExecutionContext,
+    Definitions,
+    EnvVar,
+    asset,
+    asset_check,
+)
 
 @asset(
     group_name="home_automation_bronze",
@@ -28,4 +36,15 @@ def power_by_area_and_date(context: AssetExecutionContext) -> pl.DataFrame:
     context.log.info(f"Read {len(df)} rows from electricity delta table")
     return df
 
-defs = Definitions(assets=[power_by_area_and_date])
+@asset_check(asset=power_by_area_and_date)
+def power_by_area_and_date_not_empty(power_by_area_and_date: pl.DataFrame) -> AssetCheckResult:
+    row_count = len(power_by_area_and_date)
+    return AssetCheckResult(
+        passed=row_count > 0,
+        metadata={"row_count": row_count},
+    )
+
+defs = Definitions(
+    assets=[power_by_area_and_date],
+    asset_checks=[power_by_area_and_date_not_empty],
+)
