@@ -1,5 +1,5 @@
 [project]
-name = "dagster_home_automation"
+name = "dagster-home-automation"
 requires-python = ">=3.10,<3.15"
 version = "0.1.0"
 dependencies = [
@@ -31,9 +31,9 @@ force-include = { "pyproject.toml" = "pyproject.toml" }
 directory_type = "project"
 
 [tool.dg.project]
-root_module = "dagster_home_automation"
+root_module = "home_automation"
 registry_modules = [
-    "dagster_home_automation.components.*",
+    "home_automation.components.*",
 ]
 
 
