@@ -1,7 +1,5 @@
-import boto3
 
-import dagster as dg
-from dagster import Definitions, EnvVar, InputContext, OutputContext
+from dagster import Definitions, EnvVar
 from dagster_deltalake import S3Config
 from dagster_deltalake_polars import DeltaLakePolarsIOManager
 
