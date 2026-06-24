@@ -4,7 +4,8 @@ from dagster import (
     AssetCheckResult,
     AssetExecutionContext,
     Definitions,
-    EnvVar,
+    AssetKey,
+    AssetIn,
     asset,
     asset_check,
 )
@@ -14,15 +15,12 @@ from dagster import (
     io_manager_key="home_automation_io_manager",
     key_prefix=["home-automation", "bronze"],
     automation_condition=AutomationCondition.eager(),
-)
-def power_by_area_and_date(context: AssetExecutionContext) -> pl.DataFrame:
-    storage_options = {
-        "endpoint_url": EnvVar("AWS_ENDPOINT_URL_S3").get_value(),
+    ins = {
+        "electricity": AssetIn(key=AssetKey(["home-automation", "raw", "electricity"])),
     }
-    df = pl.read_delta(
-        "s3://deltalake/home-automation/electricity/",
-        storage_options=storage_options,
-    ).group_by([
+)
+def power_by_area_and_date(context: AssetExecutionContext, electricity: pl.LazyFrame) -> pl.DataFrame:
+    df = electricity.group_by([
         pl.col("timestamp").dt.date(),
         "area"
     ]).agg(
@@ -32,7 +30,8 @@ def power_by_area_and_date(context: AssetExecutionContext) -> pl.DataFrame:
         pl.col("power").quantile(0.95).alias("p95"),
         pl.col("power").quantile(0.5).alias("p50"),
         pl.col("power").quantile(0.05).alias("p05"),
-    )
+    ).collect()
+
     context.log.info(f"Read {len(df)} rows from electricity delta table")
     return df
 
