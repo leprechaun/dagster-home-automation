@@ -10,7 +10,7 @@ from dagster import (
 )
 
 @asset(
-    group_name="home_automation_bronze",
+    group_name="home-automation",
     io_manager_key="home_automation_io_manager",
     key_prefix=["home-automation", "bronze"],
     automation_condition=AutomationCondition.eager(),
