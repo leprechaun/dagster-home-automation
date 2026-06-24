@@ -11,8 +11,8 @@ from dagster import (
 
 @asset(
     group_name="home_automation_bronze",
-    io_manager_key="home_automation_bronze_io_manager",
-    key_prefix="home_automation_bronze",
+    io_manager_key="home_automation_io_manager",
+    key_prefix=["home-automation", "bronze"],
     automation_condition=AutomationCondition.eager(),
 )
 def power_by_area_and_date(context: AssetExecutionContext) -> pl.DataFrame:
