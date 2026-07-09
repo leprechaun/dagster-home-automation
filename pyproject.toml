@@ -8,6 +8,7 @@ dependencies = [
     "dagster-deltalake>=0.29.8",
     "dagster-deltalake-polars>=0.29.8",
     "dagster-k8s>=0.29.8",
+    "dagster-openlineage>=0.2.1",
     "dagster-postgres>=0.29.8",
     "polars>=1.41.2",
 ]
