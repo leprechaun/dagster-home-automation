@@ -25,3 +25,7 @@ jobs:
           sudo wg show
                
           curl -vvv http://${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
+
+      - name: Test K8S
+        run: |
+          curl -v -k ${{ secrets.K8S_HOST }}
