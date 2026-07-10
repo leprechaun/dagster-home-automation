@@ -25,8 +25,6 @@ jobs:
           sudo wg show
 
           sudo ip route
-               
-          curl -vvv http://${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
 
       - name: Test K8S
         run: |
