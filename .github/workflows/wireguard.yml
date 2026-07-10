@@ -13,10 +13,10 @@ jobs:
 
       - name: setup wireguard
         run: |
-          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey-file
+          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > /tmp/privatekey-file
           sudo ip link add dev wg0 type wireguard
           sudo ip address add dev wg0 ${{ secrets.WIREGUARD_LOCAL_PEER_ADDRESS }} peer ${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
-          sudo wg set wg0 listen-port 48123 private-key privatekey-file peer ${{ secrets.WIREGUARD_PUBLIC_KEY }}... allowed-ips 0.0.0.0/0 endpoint ${{ secrets.WIREGUARD_ENDPOINT }}
+          sudo wg set wg0 listen-port 48123 private-key /tmp/privatekey-file peer ${{ secrets.WIREGUARD_PUBLIC_KEY }}... allowed-ips 0.0.0.0/0 endpoint ${{ secrets.WIREGUARD_ENDPOINT }}
 
       - name: connect wireguard
         run: |
