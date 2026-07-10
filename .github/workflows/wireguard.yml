@@ -23,6 +23,8 @@ jobs:
           sleep 3
           echo -- maybe connected
           sudo wg show
+
+          sudo ip route
                
           curl -vvv http://${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
 
