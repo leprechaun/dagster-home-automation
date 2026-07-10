@@ -1,0 +1,29 @@
+name: WireGuard example
+
+on:
+  workflow_dispatch:
+
+jobs:
+  wireguard_example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install wireguard
+        run: |
+          sudo apt install wireguard
+
+      - name: setup wireguard
+        run: |
+          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey-file
+          sudo ip link add dev wg0 type wireguard
+          sudo ip address add dev wg0 ${{ secrets.WIREGUARD_LOCAL_PEER_ADDRESS }} peer ${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
+          sudo wg set wg0 listen-port 48123 private-key ./privatekey-file peer ${{ secrets.WIREGUARD_PUBLIC_KEY }}... allowed-ips 0.0.0.0/0 endpoint ${{ secrets.WIREGUARD_ENDPOINT }}
+
+      - name: connect wireguard
+        run: |
+          sudo ip link set up dev wg0
+          echo -- maybe connected
+          wg show
+          
+      - name: test wireguard
+        run: |          
+          curl -vvv http://${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
