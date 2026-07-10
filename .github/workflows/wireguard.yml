@@ -33,4 +33,4 @@ jobs:
 
       - name: Get stuff
         run: |
-          kubectl get all --all-namespaces
+          kubectl get all
