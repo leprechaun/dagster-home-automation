@@ -63,3 +63,33 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: install wireguard
+        run: |
+          sudo apt install wireguard
+
+      - name: setup wireguard
+        run: |
+          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > /tmp/privatekey-file
+          sudo ip link add dev wg0 type wireguard
+          sudo ip address add dev wg0 ${{ secrets.WIREGUARD_LOCAL_PEER_ADDRESS }} peer ${{ secrets.WIREGUARD_REMOTE_PEER_ADDRESS }}
+          sudo wg set wg0 listen-port 48123 private-key /tmp/privatekey-file peer ${{ secrets.WIREGUARD_PUBLIC_KEY }} allowed-ips ${{ secrets.WIREGUARD_ALLOWED_ADDRESSES }} endpoint ${{ secrets.WIREGUARD_ENDPOINT }}
+
+          sudo ip link set up dev wg0
+
+          sudo ip route
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+
+      - name: Get stuff
+        run: |
+          kubectl set image -n dagster deployment/dagster-dagster-user-deployments-home-automation dagster-user-deployments=ghcr.io/${{ github.repository }}:${{ github.run_number }}
+          sleep 3
+          kubectl get pods -n dagster

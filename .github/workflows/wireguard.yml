@@ -33,4 +33,4 @@ jobs:
 
       - name: Get stuff
         run: |
-          kubectl get all
+          kubectl set image -n dagster deployment/dagster-dagster-user-deployments-home-automation dagster-user-deployments=ghcr.io/leprechaun/dagster-home-automation:34
