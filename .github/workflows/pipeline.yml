@@ -68,6 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
+      - uses: actions/checkout@v7
       - name: install wireguard
         run: |
           sudo apt install wireguard
@@ -81,19 +82,30 @@ jobs:
 
           sudo ip link set up dev wg0
 
-          sleep 2
           ping -c 2 10.99.3.1
           sudo wg show
 
           sudo ip route
+
+          sudo wg show
 
       - name: Set up kubeconfig
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      - name: Get stuff
+      - name: Install helm
         run: |
-          kubectl set image -n dagster deployment/dagster-dagster-user-deployments-home-automation dagster-user-deployments=ghcr.io/${{ github.repository }}:${{ github.run_number }}
-          sleep 3
-          kubectl get pods -n dagster
+          wget -q https://get.helm.sh/helm-v3.12.3-linux-amd64.tar.gz
+          tar zxvf helm-*.tar.gz
+          mv linux-amd64/helm /usr/local/bin/
+          chmod 755 /usr/local/bin/helm
+
+      - name: Helm upgrade
+        run: |
+          sed -i s/VERSION/${{ github.run_number }}/g helm-charts/values/prod.yaml
+
+          helm repo add dagster https://dagster-io.github.io/helm
+          helm upgrade --install -n dagster \
+            home-automation dagster/dagster-user-deployments \
+            -f helm-charts/values/prod.yaml
