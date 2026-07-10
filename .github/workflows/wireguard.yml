@@ -26,6 +26,11 @@ jobs:
 
           sudo ip route
 
-      - name: Test K8S
+      - name: Set up kubeconfig
         run: |
-          curl -v -k ${{ secrets.K8S_HOST }}
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+
+      - name: Get stuff
+        run: |
+          kubectl get all --all-namespaces
