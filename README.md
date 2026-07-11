@@ -21,26 +21,6 @@ Then, activate the virtual environment:
 | MacOS | ```source .venv/bin/activate``` |
 | Windows | ```.venv\Scripts\activate``` |
 
-**Option 2: pip**
-
-Install the python dependencies with [pip](https://pypi.org/project/pip/):
-
-```bash
-python3 -m venv .venv
-```
-
-Then activate the virtual environment:
-
-| OS | Command |
-| --- | --- |
-| MacOS | ```source .venv/bin/activate``` |
-| Windows | ```.venv\Scripts\activate``` |
-
-Install the required dependencies:
-
-```bash
-pip install -e ".[dev]"
-```
 
 ### Running Dagster
 
