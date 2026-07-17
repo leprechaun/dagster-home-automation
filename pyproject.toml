@@ -3,7 +3,7 @@ name = "dagster_home_automation"
 requires-python = ">=3.10,<3.15"
 version = "0.1.0"
 dependencies = [
-    "dagster==1.13.13",
+    "dagster==1.13.14",
     "dagster-aws>=0.29.8",
     "dagster-deltalake>=0.29.8",
     "dagster-deltalake-polars>=0.29.8",
