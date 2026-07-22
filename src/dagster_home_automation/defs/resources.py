@@ -13,6 +13,10 @@ defs = Definitions(
         "home_automation_io_manager": DeltaLakePolarsIOManager(
             root_uri="s3://deltalake/home-automation/",
             storage_options=_s3_config,
-        )
+        ),
+        "gadgetbridge_io_manager": DeltaLakePolarsIOManager(
+            root_uri="s3://deltalake/gadgetbridge/",
+            storage_options=_s3_config,
+        ),
     }
 )
