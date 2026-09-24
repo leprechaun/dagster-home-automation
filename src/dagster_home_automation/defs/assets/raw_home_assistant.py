@@ -50,6 +50,7 @@ def _registry_asset(name: str, command: str):
         io_manager_key="home_assistant_io_manager",
         automation_condition=AutomationCondition.on_cron("0 * * * *"),
         metadata={"mode": "append"},
+        pool="home_assistant_api",
     )
     def _asset(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
         rows = hass.fetch_registries([command])[command]
@@ -82,6 +83,7 @@ _ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-14-0
     io_manager_key="home_assistant_io_manager",
     partitions_def=_ENTITY_HISTORY_PARTITIONS,
     metadata={"partition_expr": "last_updated"},
+    pool="home_assistant_api",
 )
 def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
     start, end = context.partition_time_window
