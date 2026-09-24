@@ -100,7 +100,22 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
         pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
     )
 
-    context.log.info(f"Fetched {len(rows)} state rows for {start}..{end}; schema={df.schema}")
+    # HA's history API also returns each entity's carried-forward state as of
+    # the window start, for entities that didn't change during the window —
+    # stamped with last_changed == last_updated == the query's start_time
+    # itself, not the entity's true prior change time. Those exactly-on-the-
+    # boundary rows fail the partition_expr overwrite predicate (delta-rs
+    # requires every written row to fall strictly within the replaced
+    # partition), so use a strictly-open lower bound to drop them — the real
+    # change was already captured in whichever partition it actually
+    # happened in.
+    before_filter = len(df)
+    df = df.filter(pl.col("last_updated").is_between(start, end, closed="none"))
+    dropped = before_filter - len(df)
+
+    context.log.info(
+        f"Fetched {len(rows)} state rows for {start}..{end}, dropped {dropped} carried-forward rows; schema={df.schema}"
+    )
     return df
 
 
