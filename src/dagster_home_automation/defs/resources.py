@@ -1,11 +1,18 @@
 import asyncio
+from datetime import datetime
 
 from dagster import ConfigurableResource, Definitions, EnvVar
 from dagster_deltalake import S3Config
 from dagster_deltalake_polars import DeltaLakePolarsIOManager
 from dagster_openlineage import openlineage_sensor
 
-from dagster_home_automation.home_assistant.client import fetch_registries, websocket_url
+from dagster_home_automation.home_assistant.client import (
+    fetch_all_entity_ids,
+    fetch_history,
+    fetch_registries,
+    rest_url,
+    websocket_url,
+)
 
 
 class HomeAssistantResource(ConfigurableResource):
@@ -14,6 +21,11 @@ class HomeAssistantResource(ConfigurableResource):
 
     def fetch_registries(self, commands: list[str]) -> dict[str, list[dict]]:
         return asyncio.run(fetch_registries(websocket_url(self.url), self.token, commands))
+
+    def fetch_history(self, start: datetime, end: datetime) -> list[dict]:
+        base_url = rest_url(self.url)
+        entities = fetch_all_entity_ids(base_url, self.token)
+        return fetch_history(base_url, self.token, start, end, entities)
 
 
 _s3_config = S3Config(allow_unsafe_rename=True, endpoint=EnvVar("AWS_ENDPOINT_URL_S3"))

@@ -846,6 +846,7 @@ dependencies = [
     { name = "dagster-k8s" },
     { name = "dagster-openlineage" },
     { name = "dagster-postgres" },
+    { name = "httpx" },
     { name = "polars" },
     { name = "websockets" },
 ]
@@ -867,6 +868,7 @@ requires-dist = [
     { name = "dagster-k8s", specifier = ">=0.29.8" },
     { name = "dagster-openlineage", specifier = ">=0.2.1" },
     { name = "dagster-postgres", specifier = ">=0.29.8" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "polars", specifier = ">=1.41.2" },
     { name = "websockets", specifier = ">=16.0" },
 ]

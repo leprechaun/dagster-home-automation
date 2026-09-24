@@ -11,6 +11,7 @@ dependencies = [
     "dagster-openlineage>=0.2.1",
     "dagster-postgres>=0.29.8",
     "polars>=1.41.2",
+    "httpx>=0.28.1",
     "websockets>=16.0",
 ]
 

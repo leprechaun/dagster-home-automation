@@ -6,6 +6,7 @@ from dagster import (
     AutomationCondition,
     AssetExecutionContext,
     Definitions,
+    HourlyPartitionsDefinition,
     asset,
 )
 
@@ -16,13 +17,14 @@ from dagster_home_automation.defs.resources import HomeAssistantResource
 _TIMESTAMP_FIELDS = ("created_at", "modified_at")
 
 
-def _normalize_row(row: dict, snapshot_time: str) -> dict:
-    # Nested values (e.g. entity "categories"/"options") have a shape that
-    # varies per integration, so a Struct column would drift schema between
-    # snapshots. Flatten them to JSON text instead of letting Polars infer a
-    # struct.
+def _normalize_row(row: dict, extra: dict | None = None) -> dict:
+    # Nested values (e.g. entity "categories"/"options", state "attributes")
+    # have a shape that varies per integration, so a Struct column would
+    # drift schema between snapshots. Flatten them to JSON text instead of
+    # letting Polars infer a struct.
     row = {key: (json.dumps(value) if isinstance(value, dict) else value) for key, value in row.items()}
-    row["snapshot_time"] = snapshot_time
+    if extra:
+        row.update(extra)
     return row
 
 
@@ -53,7 +55,7 @@ def _registry_asset(name: str, command: str):
         rows = hass.fetch_registries([command])[command]
         snapshot_time = datetime.now(timezone.utc).isoformat()
 
-        normalized = [_normalize_row(row, snapshot_time) for row in rows]
+        normalized = [_normalize_row(row, {"snapshot_time": snapshot_time}) for row in rows]
         schema_overrides = {field: pl.Float64 for field in _TIMESTAMP_FIELDS}
         df = pl.DataFrame(normalized, schema_overrides=schema_overrides, infer_schema_length=None)
         df = _widen_null_columns(df)
@@ -68,4 +70,38 @@ areas = _registry_asset("areas", "config/area_registry/list")
 devices = _registry_asset("devices", "config/device_registry/list")
 entities = _registry_asset("entities", "config/entity_registry/list")
 
-defs = Definitions(assets=[areas, devices, entities])
+# Adjust to whenever you actually want state history backfilled from —
+# a Home Assistant instance's recorder retention is typically only ~10 days,
+# so there's no point starting this further back than that.
+_ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-14-00:00")
+
+
+@asset(
+    key_prefix=["home-assistant", "raw"],
+    group_name="home_automation",
+    io_manager_key="home_assistant_io_manager",
+    partitions_def=_ENTITY_HISTORY_PARTITIONS,
+    metadata={"partition_expr": "last_updated"},
+)
+def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
+    start, end = context.partition_time_window
+    rows = hass.fetch_history(start, end)
+
+    normalized = []
+    for row in rows:
+        row = dict(row)
+        row.setdefault("last_updated", row.get("last_changed"))
+        normalized.append(_normalize_row(row))
+
+    df = pl.DataFrame(normalized, infer_schema_length=None)
+    df = _widen_null_columns(df)
+    df = df.with_columns(
+        pl.col("last_changed").str.to_datetime(time_unit="us", time_zone="UTC"),
+        pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
+    )
+
+    context.log.info(f"Fetched {len(rows)} state rows for {start}..{end}; schema={df.schema}")
+    return df
+
+
+defs = Definitions(assets=[areas, devices, entities, entity_history])
