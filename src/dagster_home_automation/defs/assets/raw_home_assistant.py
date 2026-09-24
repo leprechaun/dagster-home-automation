@@ -47,6 +47,7 @@ def _registry_asset(name: str, command: str):
         group_name="home_automation",
         io_manager_key="home_assistant_io_manager",
         automation_condition=AutomationCondition.on_cron("0 * * * *"),
+        metadata={"mode": "append"},
     )
     def _asset(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
         rows = hass.fetch_registries([command])[command]
