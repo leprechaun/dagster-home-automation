@@ -10,6 +10,7 @@ dependencies = [
     "dagster-k8s>=0.29.8",
     "dagster-openlineage>=0.2.1",
     "dagster-postgres>=0.29.8",
+    "dagster-delta[polars]>=0.5.9",
     "polars>=1.41.2",
     "httpx>=0.28.1",
     "websockets>=16.0",
