@@ -847,6 +847,7 @@ dependencies = [
     { name = "dagster-openlineage" },
     { name = "dagster-postgres" },
     { name = "polars" },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -867,6 +868,7 @@ requires-dist = [
     { name = "dagster-openlineage", specifier = ">=0.2.1" },
     { name = "dagster-postgres", specifier = ">=0.29.8" },
     { name = "polars", specifier = ">=1.41.2" },
+    { name = "websockets", specifier = ">=16.0" },
 ]
 
 [package.metadata.requires-dev]
