@@ -82,7 +82,7 @@ _ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-14-0
     group_name="home_automation",
     io_manager_key="home_assistant_io_manager",
     partitions_def=_ENTITY_HISTORY_PARTITIONS,
-    metadata={"partition_expr": "last_updated"},
+    metadata={"partition_expr": "partition_hour"},
     pool="home_assistant_api",
 )
 def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
@@ -100,6 +100,7 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
     df = df.with_columns(
         pl.col("last_changed").str.to_datetime(time_unit="us", time_zone="UTC"),
         pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
+        pl.lit(start).alias("partition_hour"),
     )
 
     # HA's history API also returns each entity's carried-forward state as of
