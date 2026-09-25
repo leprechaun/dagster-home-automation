@@ -97,6 +97,8 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
 
     df = pl.DataFrame(normalized, infer_schema_length=None)
     df = _widen_null_columns(df)
+    context.log.info(df.schema)
+    context.log.info(df)
     df = df.with_columns(
         pl.col("last_changed").str.to_datetime(time_unit="us", time_zone="UTC"),
         pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
