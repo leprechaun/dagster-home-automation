@@ -74,7 +74,7 @@ entities = _registry_asset("entities", "config/entity_registry/list")
 # Adjust to whenever you actually want state history backfilled from —
 # a Home Assistant instance's recorder retention is typically only ~10 days,
 # so there's no point starting this further back than that.
-_ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-14-00:00")
+_ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-15-00:00")
 
 
 @asset(
