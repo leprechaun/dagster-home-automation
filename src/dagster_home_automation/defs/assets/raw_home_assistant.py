@@ -5,8 +5,8 @@ import polars as pl
 from dagster import (
     AutomationCondition,
     AssetExecutionContext,
+    DailyPartitionsDefinition,
     Definitions,
-    HourlyPartitionsDefinition,
     asset,
 )
 
@@ -74,7 +74,7 @@ entities = _registry_asset("entities", "config/entity_registry/list")
 # Adjust to whenever you actually want state history backfilled from —
 # a Home Assistant instance's recorder retention is typically only ~10 days,
 # so there's no point starting this further back than that.
-_ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-15-00:00")
+_ENTITY_HISTORY_PARTITIONS = DailyPartitionsDefinition(start_date="2026-09-15")
 
 
 @asset(
@@ -82,12 +82,28 @@ _ENTITY_HISTORY_PARTITIONS = HourlyPartitionsDefinition(start_date="2026-09-15-0
     group_name="home_automation",
     io_manager_key="home_assistant_io_manager",
     partitions_def=_ENTITY_HISTORY_PARTITIONS,
-    metadata={"partition_expr": "partition_hour"},
+    metadata={"partition_expr": "partition_day"},
+    automation_condition=AutomationCondition.on_cron("0 * * * *"),
     pool="home_assistant_api",
 )
 def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
-    start, end = context.partition_time_window
-    rows = hass.fetch_history(start, end)
+    # Physical partitioning is daily (see partition_day below — dagster_delta
+    # validates every written row against a predicate built from this
+    # asset's own partition window regardless of write mode, so the physical
+    # column has to be constant across that whole window; hourly physical
+    # partitions would fail validation for every hour except midnight).
+    #
+    # Always fetch the whole day so far (not just an incremental slice) and
+    # overwrite (the default mode) rather than append. This makes every run
+    # a complete, idempotent snapshot of the day up to now — a missed cron
+    # tick (e.g. the daemon being down for a few hours) is invisible on the
+    # next run, since that run just re-fetches from midnight again rather
+    # than trusting a fixed lookback window to have covered the gap.
+    day_start, day_end = context.partition_time_window
+    now = datetime.now(timezone.utc)
+    fetch_start, fetch_end = day_start, min(day_end, now)
+
+    rows = hass.fetch_history(fetch_start, fetch_end)
 
     normalized = []
     for row in rows:
@@ -102,24 +118,20 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
     df = df.with_columns(
         pl.col("last_changed").str.to_datetime(time_unit="us", time_zone="UTC"),
         pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
-        pl.lit(start).alias("partition_hour"),
+        pl.lit(day_start).alias("partition_day"),
     )
 
     # HA's history API also returns each entity's carried-forward state as of
-    # the window start, for entities that didn't change during the window —
-    # stamped with last_changed == last_updated == the query's start_time
-    # itself, not the entity's true prior change time. Those exactly-on-the-
-    # boundary rows fail the partition_expr overwrite predicate (delta-rs
-    # requires every written row to fall strictly within the replaced
-    # partition), so use a strictly-open lower bound to drop them — the real
-    # change was already captured in whichever partition it actually
-    # happened in.
+    # the fetch window start (midnight), for entities that didn't change
+    # since before then — stamped with last_changed == last_updated ==
+    # day_start itself, not the entity's true prior change time. Drop those;
+    # they don't represent a real event at that timestamp.
     before_filter = len(df)
-    df = df.filter(pl.col("last_updated").is_between(start, end, closed="none"))
+    df = df.filter(pl.col("last_updated").is_between(fetch_start, fetch_end, closed="none"))
     dropped = before_filter - len(df)
 
     context.log.info(
-        f"Fetched {len(rows)} state rows for {start}..{end}, dropped {dropped} carried-forward rows; schema={df.schema}"
+        f"Fetched {len(rows)} state rows for {fetch_start}..{fetch_end}, dropped {dropped} carried-forward rows; schema={df.schema}"
     )
     return df
 
