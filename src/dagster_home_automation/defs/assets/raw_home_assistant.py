@@ -118,7 +118,7 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
     df = df.with_columns(
         pl.col("last_changed").str.to_datetime(time_unit="us", time_zone="UTC"),
         pl.col("last_updated").str.to_datetime(time_unit="us", time_zone="UTC"),
-        pl.lit(day_start).alias("partition_day"),
+        pl.lit(day_start.date()).alias("partition_day"),
     )
 
     # HA's history API also returns each entity's carried-forward state as of
