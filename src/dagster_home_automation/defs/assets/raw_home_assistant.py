@@ -74,7 +74,14 @@ entities = _registry_asset("entities", "config/entity_registry/list")
 # Adjust to whenever you actually want state history backfilled from —
 # a Home Assistant instance's recorder retention is typically only ~10 days,
 # so there's no point starting this further back than that.
-_ENTITY_HISTORY_PARTITIONS = DailyPartitionsDefinition(start_date="2026-09-15")
+#
+# end_offset=1 makes today count as a valid, materializable partition
+# (otherwise a partition's window has to fully close before Dagster will
+# offer it at all, which is why data was landing a day late). The asset
+# body already handles an in-progress "today" correctly — it fetches
+# [day_start, now) and overwrites, so re-running it repeatedly through the
+# day is safe.
+_ENTITY_HISTORY_PARTITIONS = DailyPartitionsDefinition(start_date="2026-09-15", end_offset=1)
 
 
 @asset(
