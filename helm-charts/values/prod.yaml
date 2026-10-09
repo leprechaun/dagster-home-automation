@@ -23,4 +23,5 @@ deployments:
     - "/deploy_k8s/src/dagster_home_automation/definitions.py"
   port: 3030
   envSecrets:
-    - name: gadgetbridge
+    - name: dagster-shared
+    - name: home-automation
