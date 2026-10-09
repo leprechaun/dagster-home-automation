@@ -56,7 +56,10 @@ def fetch_history(
 async def fetch_registries(url: str, token: str, commands: list[str]) -> dict[str, list[dict]]:
     ids = itertools.count(1)
 
-    async with websockets.connect(url) as conn:
+    # websockets defaults to a 1 MiB max message size; the entity registry
+    # alone has grown past that as the number of devices/entities has grown,
+    # closing the connection with code 1009 before we ever get the response.
+    async with websockets.connect(url, max_size=16 * 1024 * 1024) as conn:
         msg = json.loads(await conn.recv())
         if msg["type"] != "auth_required":
             raise RuntimeError(f"unexpected handshake message: {msg}")
