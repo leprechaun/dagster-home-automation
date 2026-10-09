@@ -3,11 +3,13 @@ from datetime import datetime, timezone
 
 import polars as pl
 from dagster import (
+    AssetCheckResult,
     AutomationCondition,
     AssetExecutionContext,
     DailyPartitionsDefinition,
     Definitions,
     asset,
+    asset_check,
 )
 
 from dagster_home_automation.defs.resources import HomeAssistantResource
@@ -42,7 +44,7 @@ def _widen_null_columns(df: pl.DataFrame) -> pl.DataFrame:
     return df.with_columns(casts) if casts else df
 
 
-def _registry_asset(name: str, command: str):
+def _registry_asset(name: str, command: str, required_columns: tuple[str, ...]):
     @asset(
         name=name,
         key_prefix=["home-assistant", "raw"],
@@ -52,7 +54,11 @@ def _registry_asset(name: str, command: str):
         # schema_mode="merge": HA adds fields to its registry APIs over
         # versions (e.g. next_name_part appearing on device registry
         # entries) — without this, append fails outright the moment a
-        # snapshot has more fields than the table's existing schema.
+        # snapshot has more fields than the table's existing schema. merge
+        # tolerates a field disappearing from a batch too (backfills null),
+        # which is fine for fields we don't use but would be a silent,
+        # undetected correctness problem for ones we depend on downstream
+        # (see the required_columns check below).
         metadata={"mode": "append", "schema_mode": "merge"},
         pool="home_assistant_api",
     )
@@ -68,12 +74,32 @@ def _registry_asset(name: str, command: str):
         context.log.info(f"Fetched {len(rows)} rows from {command}; schema={df.schema}")
         return df
 
-    return _asset
+    @asset_check(asset=_asset, name=f"{name}_has_required_columns", blocking=True)
+    def _has_required_columns(df: pl.DataFrame) -> AssetCheckResult:
+        missing = sorted(set(required_columns) - set(df.columns))
+        return AssetCheckResult(
+            passed=not missing,
+            metadata={"missing_columns": missing},
+        )
+
+    return _asset, _has_required_columns
 
 
-areas = _registry_asset("areas", "config/area_registry/list")
-devices = _registry_asset("devices", "config/device_registry/list")
-entities = _registry_asset("entities", "config/entity_registry/list")
+# Required columns are exactly what entity_history_enriched's join_asof
+# chain depends on downstream (see silver_home_assistant.py) — not every
+# field we happen to receive, since harmless fields coming and going (like
+# next_name_part) shouldn't trip this.
+areas, areas_has_required_columns = _registry_asset(
+    "areas", "config/area_registry/list", required_columns=("area_id", "name")
+)
+devices, devices_has_required_columns = _registry_asset(
+    "devices", "config/device_registry/list", required_columns=("id", "area_id", "name", "name_by_user")
+)
+entities, entities_has_required_columns = _registry_asset(
+    "entities",
+    "config/entity_registry/list",
+    required_columns=("entity_id", "device_id", "area_id", "name", "platform"),
+)
 
 # Adjust to whenever you actually want state history backfilled from —
 # a Home Assistant instance's recorder retention is typically only ~10 days,
@@ -147,4 +173,7 @@ def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) 
     return df
 
 
-defs = Definitions(assets=[areas, devices, entities, entity_history])
+defs = Definitions(
+    assets=[areas, devices, entities, entity_history],
+    asset_checks=[areas_has_required_columns, devices_has_required_columns, entities_has_required_columns],
+)
