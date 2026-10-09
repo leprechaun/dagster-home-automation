@@ -1,7 +1,9 @@
 import asyncio
+import os
 from datetime import datetime
 
 from dagster import ConfigurableResource, Definitions, EnvVar
+from dagster_apprise import AppriseNotificationsConfig, apprise_notifications
 from dagster_deltalake import S3Config
 from dagster_deltalake_polars import DeltaLakePolarsIOManager
 from dagster_delta import ClientConfig as HomeAssistantClientConfig
@@ -63,3 +65,16 @@ defs = Definitions(
         ),
     }
 )
+
+_apprise_url = os.environ.get("APPRISE_NOTIFICATION_URL")
+if _apprise_url:
+    defs = Definitions.merge(
+        defs,
+        apprise_notifications(
+            AppriseNotificationsConfig(
+                urls=[_apprise_url],
+                events=["SUCCESS", "FAILURE"],
+                title_prefix="Home Automation Pipeline",
+            )
+        ),
+    )
