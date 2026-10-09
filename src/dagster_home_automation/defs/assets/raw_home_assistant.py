@@ -49,7 +49,11 @@ def _registry_asset(name: str, command: str):
         group_name="home_automation",
         io_manager_key="home_assistant_io_manager",
         automation_condition=AutomationCondition.on_cron("0 * * * *"),
-        metadata={"mode": "append"},
+        # schema_mode="merge": HA adds fields to its registry APIs over
+        # versions (e.g. next_name_part appearing on device registry
+        # entries) — without this, append fails outright the moment a
+        # snapshot has more fields than the table's existing schema.
+        metadata={"mode": "append", "schema_mode": "merge"},
         pool="home_assistant_api",
     )
     def _asset(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
