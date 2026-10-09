@@ -73,7 +73,7 @@ if _apprise_url:
         apprise_notifications(
             AppriseNotificationsConfig(
                 urls=[_apprise_url],
-                events=["SUCCESS", "FAILURE"],
+                events=["FAILURE"],
                 title_prefix="Home Automation Pipeline",
             )
         ),
