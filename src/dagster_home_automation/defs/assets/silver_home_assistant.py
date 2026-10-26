@@ -116,12 +116,19 @@ def entity_history_enriched(
         .with_columns(
             pl.col("attributes").str.json_path_match("$.device_class").alias("device_class"),
             pl.col("attributes").str.json_path_match("$.unit_of_measurement").alias("unit_of_measurement"),
+            # The name HA itself displayed at the time. The registry's own
+            # `name` is only a user override (null for most entities), and
+            # rebuilding HA's naming rules from the registry would need
+            # has_entity_name + device name + original_name.
+            pl.col("attributes").str.json_path_match("$.friendly_name").alias("entity_name"),
             # state stays as-is (it's the correct representation for
             # categorical/boolean entities); value is the opportunistic
             # numeric cast, null wherever state isn't actually a number.
             pl.col("state").cast(pl.Float64, strict=False).alias("value"),
         )
-        .select("entity_id", "last_updated", "partition_day", "state", "value", "device_class", "unit_of_measurement")
+        .select(
+            "entity_id", "last_updated", "partition_day", "state", "value", "device_class", "unit_of_measurement", "entity_name"
+        )
         .sort("entity_id", "last_updated")
     )
 
@@ -132,7 +139,6 @@ def entity_history_enriched(
             "valid_from",
             "device_id",
             pl.col("area_id").alias("entity_area_id"),
-            pl.col("name").alias("entity_name"),
         )
         .sort("entity_id", "valid_from")
     )

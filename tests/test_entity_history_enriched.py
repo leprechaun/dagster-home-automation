@@ -21,7 +21,7 @@ def events(*rows: tuple[str, datetime]) -> pl.LazyFrame:
                 "last_updated": when,
                 "partition_day": date(2026, 10, 1),
                 "state": "12.5",
-                "attributes": '{"device_class": "power", "unit_of_measurement": "W"}',
+                "attributes": '{"friendly_name": "Fan power", "device_class": "power", "unit_of_measurement": "W"}',
             }
             for entity_id, when in rows
         ],
@@ -132,7 +132,32 @@ def test_device_name_given_by_the_user_wins_over_the_integrations_name():
     assert [r["device_name"] for r in rows] == ["Fan plug", "Smart Plug"]
 
 
-def test_event_with_no_version_in_force_is_kept_without_names():
+def test_entity_name_is_the_friendly_name_home_assistant_showed_at_the_time():
+    history = pl.DataFrame(
+        [
+            {
+                "entity_id": "sensor.fan_power",
+                "last_updated": at(hour),
+                "partition_day": date(2026, 10, 1),
+                "state": "12.5",
+                "attributes": f'{{"friendly_name": "{friendly_name}", "device_class": "power"}}',
+            }
+            for hour, friendly_name in [(9, "Athom Plug 509bac Power"), (11, "Fan power")]
+        ],
+        schema={"entity_id": pl.Utf8, "last_updated": UTC, "partition_day": pl.Date, "state": pl.Utf8, "attributes": pl.Utf8},
+    ).lazy()
+
+    rows = enrich(
+        history,
+        entities({"entity_id": "sensor.fan_power", "valid_from": BEGINNING, "device_id": "dev1", "name": None}),
+        devices({"device_id": "dev1", "valid_from": BEGINNING, "name": "Athom Plug 509bac"}),
+        areas(),
+    )
+
+    assert [r["entity_name"] for r in rows] == ["Athom Plug 509bac Power", "Fan power"]
+
+
+def test_event_with_no_version_in_force_is_kept_with_only_its_own_name():
     rows = enrich(
         events(("sensor.unknown", at(9))),
         entities(),
@@ -141,5 +166,5 @@ def test_event_with_no_version_in_force_is_kept_without_names():
     )
 
     assert [(r["entity_id"], r["entity_name"], r["device_name"], r["area_name"]) for r in rows] == [
-        ("sensor.unknown", None, None, None)
+        ("sensor.unknown", "Fan power", None, None)
     ]
