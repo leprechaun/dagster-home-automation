@@ -28,6 +28,10 @@ def _versions_asset(name: str, key: str, tracked: list[str], raw_key: str | None
         io_manager_key="home_assistant_io_manager",
         automation_condition=AutomationCondition.eager(),
         ins={"snapshots": AssetIn(key=AssetKey(["home-assistant", "raw", name]))},
+        description=(
+            f"SCD2 history of Home Assistant {name}: one row per {key} version, with valid_from/valid_to, "
+            f"tracking {', '.join(tracked)}; rebuilt in full from raw snapshots every run"
+        ),
     )
     def _asset(context: AssetExecutionContext, snapshots: pl.LazyFrame) -> pl.DataFrame:
         parsed = (
@@ -93,6 +97,11 @@ area_versions, area_versions_are_well_formed = _versions_asset("areas", key="are
     partitions_def=_ENTITY_HISTORY_PARTITIONS,
     metadata={"partition_expr": "partition_day"},
     automation_condition=AutomationCondition.eager(),
+    description=(
+        "Home Assistant state changes joined to the entity, device and area versions in force at the time, "
+        "with display names, effective area, numeric value, device_class and unit_of_measurement; "
+        "partitioned by day"
+    ),
     ins={
         "entity_history": AssetIn(key=AssetKey(["home-assistant", "raw", "entity_history"])),
         "entities": AssetIn(key=AssetKey(["home-assistant", "silver", "entities"])),

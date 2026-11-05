@@ -13,6 +13,10 @@ from dagster import (
 
 huami_extended_activity_sample = AssetSpec(
     key=["gadgetbridge", "bronze", "huami_extended_activity_sample"],
+    description=(
+        "Wrist band activity samples (raw intensity, heart rate) synced from Gadgetbridge; "
+        "owned by the dagster-gadgetbridge pipeline"
+    ),
 ).with_io_manager_key("gadgetbridge_io_manager")
 
 @asset(
@@ -20,6 +24,10 @@ huami_extended_activity_sample = AssetSpec(
     io_manager_key="home_automation_io_manager",
     key_prefix=["home-automation", "silver"],
     automation_condition=AutomationCondition.eager(),
+    description=(
+        "Per-minute average power draw alongside average wrist band activity intensity, "
+        "full-outer-joined so minutes with only one of the two are kept"
+    ),
     ins = {
         "electricity": AssetIn(key=AssetKey(["home-automation", "raw", "electricity"])),
         "activity": AssetIn(key=AssetKey(["gadgetbridge", "bronze", "huami_extended_activity_sample"])),

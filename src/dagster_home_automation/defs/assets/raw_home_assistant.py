@@ -51,6 +51,10 @@ def _registry_asset(name: str, command: str, required_columns: tuple[str, ...]):
         group_name="home_automation",
         io_manager_key="home_assistant_io_manager",
         automation_condition=AutomationCondition.on_cron("0 * * * *"),
+        description=(
+            f"Hourly full snapshots of Home Assistant's {name} registry ({command}), "
+            "appended with a snapshot_time; kept complete so silver can be rebuilt (docs/adr/0001)"
+        ),
         # schema_mode="merge": HA adds fields to its registry APIs over
         # versions (e.g. next_name_part appearing on device registry
         # entries) — without this, append fails outright the moment a
@@ -122,6 +126,10 @@ _ENTITY_HISTORY_PARTITIONS = DailyPartitionsDefinition(start_date="2026-09-15", 
     metadata={"partition_expr": "partition_day"},
     automation_condition=AutomationCondition.on_cron("0 * * * *"),
     pool="home_assistant_api",
+    description=(
+        "Home Assistant state changes, one row per entity state update, partitioned by day; "
+        "each run re-fetches the day so far and overwrites its partition"
+    ),
 )
 def entity_history(context: AssetExecutionContext, hass: HomeAssistantResource) -> pl.DataFrame:
     # Physical partitioning is daily (see partition_day below — dagster_delta

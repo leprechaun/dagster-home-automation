@@ -15,6 +15,10 @@ from dagster import (
     io_manager_key="home_automation_io_manager",
     key_prefix=["home-automation", "bronze"],
     automation_condition=AutomationCondition.eager(),
+    description=(
+        "Daily power statistics per area (min, mean, max, and 5th/50th/95th percentiles) "
+        "from the raw electricity readings"
+    ),
     ins = {
         "electricity": AssetIn(key=AssetKey(["home-automation", "raw", "electricity"])),
     }
